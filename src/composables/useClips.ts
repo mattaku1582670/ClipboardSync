@@ -1,0 +1,106 @@
+import { ref, onMounted, onUnmounted } from 'vue'
+import { supabase } from '../lib/supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+
+export interface Clip {
+  id: string
+  content: string
+  device_name: string
+  content_type: 'text' | 'url'
+  created_at: string
+}
+
+export function useClips(userId: string) {
+  const clips = ref<Clip[]>([])
+  const loading = ref(false)
+  let channel: RealtimeChannel | null = null
+
+  function getDeviceName(): string {
+    const ua = navigator.userAgent
+    if (/iPhone|iPad|iPod/.test(ua)) return 'iPhone'
+    if (/Android/.test(ua)) return 'Android'
+    if (/Mac/.test(ua)) return 'Mac'
+    if (/Windows/.test(ua)) return 'Windows'
+    return 'Browser'
+  }
+
+  async function fetchClips() {
+    loading.value = true
+    const { data, error } = await supabase
+      .from('clips')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (!error && data) {
+      clips.value = data
+    }
+    loading.value = false
+  }
+
+  function isUrl(text: string): boolean {
+    try {
+      new URL(text)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async function sendClip(content: string) {
+    const trimmed = content.trim()
+    if (!trimmed) return
+
+    const contentType = isUrl(trimmed) ? 'url' : 'text'
+
+    const { error } = await supabase.from('clips').insert({
+      user_id: userId,
+      content: trimmed,
+      device_name: getDeviceName(),
+      content_type: contentType,
+    })
+
+    if (error) throw error
+  }
+
+  function subscribe() {
+    channel = supabase
+      .channel('clips-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'clips',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newClip = payload.new as Clip
+          clips.value.unshift(newClip)
+          if (clips.value.length > 20) {
+            clips.value = clips.value.slice(0, 20)
+          }
+        }
+      )
+      .subscribe()
+  }
+
+  async function deleteClip(clipId: string) {
+    await supabase.from('clips').delete().eq('id', clipId)
+    clips.value = clips.value.filter((c) => c.id !== clipId)
+  }
+
+  onMounted(() => {
+    fetchClips()
+    subscribe()
+  })
+
+  onUnmounted(() => {
+    if (channel) {
+      supabase.removeChannel(channel)
+    }
+  })
+
+  return { clips, loading, sendClip, deleteClip, fetchClips }
+}
