@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import AuthForm from './components/AuthForm.vue'
 import ClipInput from './components/ClipInput.vue'
 import ClipList from './components/ClipList.vue'
@@ -63,10 +63,20 @@ async function deleteClip(id: string) {
 }
 
 watch(user, (newUser) => {
+  if (clipsApi) {
+    clipsApi.cleanup()
+    clipsApi = null
+  }
   if (newUser) {
     clipsApi = useClips(newUser.id)
     watch(clipsApi.clips, (v) => { clips.value = v }, { immediate: true })
     watch(clipsApi.loading, (v) => { clipsLoading.value = v }, { immediate: true })
+    clipsApi.fetchClips()
+    clipsApi.subscribe()
   }
+})
+
+onUnmounted(() => {
+  clipsApi?.cleanup()
 })
 </script>

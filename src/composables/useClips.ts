@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -91,16 +91,12 @@ export function useClips(userId: string) {
     clips.value = clips.value.filter((c) => c.id !== clipId)
   }
 
-  onMounted(() => {
-    fetchClips()
-    subscribe()
-  })
-
-  onUnmounted(() => {
+  function cleanup() {
     if (channel) {
       supabase.removeChannel(channel)
+      channel = null
     }
-  })
+  }
 
-  return { clips, loading, sendClip, deleteClip, fetchClips }
+  return { clips, loading, sendClip, deleteClip, fetchClips, subscribe, cleanup }
 }
