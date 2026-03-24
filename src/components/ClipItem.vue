@@ -44,9 +44,22 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="text-slate-500 text-xs">{{ relativeTime }}</span>
+
+        <!-- 削除確認 -->
+        <template v-if="confirming">
+          <button
+            @click.stop="handleDeleteConfirm"
+            class="text-xs text-white bg-red-500 hover:bg-red-400 px-2 py-1 rounded-lg transition-colors"
+          >削除する</button>
+          <button
+            @click.stop="confirming = false"
+            class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg transition-colors"
+          >キャンセル</button>
+        </template>
         <button
-          @click.stop="emit('delete', clip.id)"
-          class="text-slate-600 hover:text-red-400 transition-colors text-xs"
+          v-else
+          @click.stop="handleDeleteRequest"
+          class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
           title="削除"
         >✕</button>
       </div>
@@ -67,6 +80,19 @@ const emit = defineEmits<{
 
 const { copyToClipboard } = useClipboard()
 const justCopied = ref(false)
+const confirming = ref(false)
+let confirmTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleDeleteRequest() {
+  confirming.value = true
+  confirmTimer = setTimeout(() => { confirming.value = false }, 3000)
+}
+
+function handleDeleteConfirm() {
+  if (confirmTimer) clearTimeout(confirmTimer)
+  confirming.value = false
+  emit('delete', props.clip.id)
+}
 
 async function handleCopy() {
   const ok = await copyToClipboard(props.clip.content)

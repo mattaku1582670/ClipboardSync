@@ -77,23 +77,26 @@ const encryptionEnabled = ref(false)
 const clips = ref<Clip[]>([])
 const decryptedClips = ref<Clip[]>([])
 const clipsLoading = ref(false)
+const decryptTrigger = ref(0)
 let clipsApi: ReturnType<typeof useClips> | null = null
 
-// クリップが更新されるたびに復号
-watch(clips, async (newClips) => {
+// clips または暗号化状態が変わるたびに復号
+watch([clips, decryptTrigger], async () => {
   decryptedClips.value = await Promise.all(
-    newClips.map(async (clip) => ({ ...clip, content: await decrypt(clip.content) }))
+    clips.value.map(async (clip) => ({ ...clip, content: await decrypt(clip.content) }))
   )
 }, { immediate: true })
 
 function onEncryptionDone() {
   encryptionEnabled.value = true
   encryptionReady.value = true
+  decryptTrigger.value++
 }
 
 function onEncryptionSkip() {
   encryptionEnabled.value = false
   encryptionReady.value = true
+  decryptTrigger.value++
 }
 
 function handleLock() {

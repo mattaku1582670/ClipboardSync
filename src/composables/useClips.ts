@@ -75,7 +75,7 @@ export function useClips(userId: string) {
 
   function subscribe() {
     channel = supabase
-      .channel('clips-realtime')
+      .channel(`clips-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -89,21 +89,12 @@ export function useClips(userId: string) {
           clips.value = sortClips([newClip, ...clips.value]).slice(0, 20)
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'clips',
-        },
-        (payload) => {
-          const updated = payload.new as Clip & { user_id: string }
-          if (updated.user_id !== userId) return
-          clips.value = sortClips(
-            clips.value.map((c) => (c.id === updated.id ? updated : c))
-          )
-        }
-      )
+      .on('broadcast', { event: 'pin-changed' }, (payload) => {
+        const { clipId, pinned } = payload.payload as { clipId: string; pinned: boolean }
+        clips.value = sortClips(
+          clips.value.map((c) => (c.id === clipId ? { ...c, pinned } : c))
+        )
+      })
       .subscribe()
   }
 
@@ -112,6 +103,7 @@ export function useClips(userId: string) {
     clips.value = sortClips(
       clips.value.map((c) => (c.id === clipId ? { ...c, pinned } : c))
     )
+    channel?.send({ type: 'broadcast', event: 'pin-changed', payload: { clipId, pinned } })
   }
 
   async function deleteClip(clipId: string) {
