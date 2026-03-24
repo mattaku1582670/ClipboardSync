@@ -8,6 +8,7 @@ export interface Clip {
   device_name: string
   content_type: 'text' | 'url'
   created_at: string
+  pinned: boolean
 }
 
 export function useClips(userId: string) {
@@ -30,6 +31,7 @@ export function useClips(userId: string) {
       .from('clips')
       .select('*')
       .eq('user_id', userId)
+      .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -64,6 +66,13 @@ export function useClips(userId: string) {
     if (error) throw error
   }
 
+  function sortClips(list: Clip[]): Clip[] {
+    return [...list].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }
+
   function subscribe() {
     channel = supabase
       .channel('clips-realtime')
@@ -77,13 +86,32 @@ export function useClips(userId: string) {
         },
         (payload) => {
           const newClip = payload.new as Clip
-          clips.value.unshift(newClip)
-          if (clips.value.length > 20) {
-            clips.value = clips.value.slice(0, 20)
-          }
+          clips.value = sortClips([newClip, ...clips.value]).slice(0, 20)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'clips',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Clip
+          clips.value = sortClips(
+            clips.value.map((c) => (c.id === updated.id ? updated : c))
+          )
         }
       )
       .subscribe()
+  }
+
+  async function togglePin(clipId: string, pinned: boolean) {
+    await supabase.from('clips').update({ pinned }).eq('id', clipId)
+    clips.value = sortClips(
+      clips.value.map((c) => (c.id === clipId ? { ...c, pinned } : c))
+    )
   }
 
   async function deleteClip(clipId: string) {
@@ -98,5 +126,5 @@ export function useClips(userId: string) {
     }
   }
 
-  return { clips, loading, sendClip, deleteClip, fetchClips, subscribe, cleanup }
+  return { clips, loading, sendClip, togglePin, deleteClip, fetchClips, subscribe, cleanup }
 }

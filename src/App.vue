@@ -45,6 +45,7 @@
           :clips="decryptedClips"
           :loading="clipsLoading"
           @delete="deleteClip"
+          @toggle-pin="togglePin"
         />
       </main>
     </template>
@@ -100,6 +101,11 @@ async function sendClip(content: string) {
   if (!clipsApi) return
   const payload = encryptionEnabled.value ? await encrypt(content) : content
   await clipsApi.sendClip(payload)
+}
+
+async function togglePin(id: string, pinned: boolean) {
+  if (!clipsApi) return
+  await clipsApi.togglePin(id, pinned)
 }
 
 async function deleteClip(id: string) {

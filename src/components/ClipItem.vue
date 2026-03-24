@@ -1,6 +1,7 @@
 <template>
   <div
-    class="bg-slate-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+    class="rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+    :class="clip.pinned ? 'bg-slate-700 ring-1 ring-blue-500/40' : 'bg-slate-800'"
     @click="handleCopy"
   >
     <div class="flex items-start justify-between gap-3">
@@ -19,14 +20,22 @@
         </template>
       </div>
 
-      <button
-        @click.stop="handleCopy"
-        class="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors"
-        :title="justCopied ? 'コピーしました!' : 'コピー'"
-      >
-        <span v-if="justCopied" class="text-green-400 text-lg">✓</span>
-        <span v-else class="text-slate-300 text-base">⎘</span>
-      </button>
+      <div class="flex gap-1 shrink-0">
+        <button
+          @click.stop="emit('toggle-pin', clip.id, !clip.pinned)"
+          class="w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+          :class="clip.pinned ? 'text-blue-400 bg-blue-500/20 hover:bg-blue-500/30' : 'text-slate-600 bg-slate-700 hover:text-slate-300 hover:bg-slate-600'"
+          :title="clip.pinned ? 'ピン留めを外す' : 'ピン留め'"
+        >📌</button>
+        <button
+          @click.stop="handleCopy"
+          class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors"
+          :title="justCopied ? 'コピーしました!' : 'コピー'"
+        >
+          <span v-if="justCopied" class="text-green-400 text-lg">✓</span>
+          <span v-else class="text-slate-300 text-base">⎘</span>
+        </button>
+      </div>
     </div>
 
     <div class="flex items-center justify-between mt-3">
@@ -51,7 +60,10 @@ import type { Clip } from '../composables/useClips'
 import { useClipboard } from '../composables/useClipboard'
 
 const props = defineProps<{ clip: Clip }>()
-const emit = defineEmits<{ delete: [id: string] }>()
+const emit = defineEmits<{
+  delete: [id: string]
+  'toggle-pin': [id: string, pinned: boolean]
+}>()
 
 const { copyToClipboard } = useClipboard()
 const justCopied = ref(false)
