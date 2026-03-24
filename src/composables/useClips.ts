@@ -95,10 +95,10 @@ export function useClips(userId: string) {
           event: 'UPDATE',
           schema: 'public',
           table: 'clips',
-          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const updated = payload.new as Clip
+          const updated = payload.new as Clip & { user_id: string }
+          if (updated.user_id !== userId) return
           clips.value = sortClips(
             clips.value.map((c) => (c.id === updated.id ? updated : c))
           )
