@@ -18,7 +18,10 @@
       <!-- Header -->
       <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3">
         <div class="max-w-lg mx-auto flex items-center justify-between">
-          <h1 class="font-bold text-lg">📋 ClipSync</h1>
+          <div class="flex items-baseline gap-2">
+            <h1 class="font-bold text-lg">📋 ClipSync</h1>
+            <span class="text-xs text-slate-500">v{{ version }}</span>
+          </div>
           <div class="flex items-center gap-3">
             <button
               v-if="encryptionEnabled"
@@ -62,6 +65,8 @@ import { useAuth } from './composables/useAuth'
 import { useClips } from './composables/useClips'
 import { useEncryption } from './composables/useEncryption'
 import type { Clip } from './composables/useClips'
+
+const version = __APP_VERSION__
 
 const { user, loading, signOut } = useAuth()
 const { encrypt, decrypt, lock } = useEncryption()
