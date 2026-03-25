@@ -18,10 +18,14 @@
       <!-- Header -->
       <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3">
         <div class="max-w-lg mx-auto flex items-center justify-between">
-          <div class="flex items-baseline gap-2">
+          <button
+            class="flex items-baseline gap-2 cursor-pointer hover:opacity-70 transition-opacity active:scale-95"
+            @click="handleRefresh"
+            title="クリックで更新"
+          >
             <h1 class="font-bold text-lg">📋 ClipSync</h1>
             <span class="text-xs text-slate-500">v{{ version }}</span>
-          </div>
+          </button>
           <div class="flex items-center gap-3">
             <button
               v-if="notificationSupported && notificationPermission !== 'granted'"
@@ -116,6 +120,11 @@ function handleLock() {
   lock()
   encryptionReady.value = false
   encryptionEnabled.value = false
+}
+
+async function handleRefresh() {
+  if (!clipsApi) return
+  await clipsApi.fetchClips()
 }
 
 async function handleNewClip(clip: Clip) {
