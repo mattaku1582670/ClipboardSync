@@ -5,9 +5,9 @@
     </template>
     <template v-else-if="clips.length === 0">
       <div class="text-center py-12">
-        <div class="text-4xl mb-3">📋</div>
-        <p class="text-slate-500 text-sm">クリップがありません</p>
-        <p class="text-slate-600 text-xs mt-1">テキストを送信すると、ここに表示されます</p>
+        <div class="text-4xl mb-3">{{ isSearching ? '🔍' : '📋' }}</div>
+        <p class="text-slate-500 text-sm">{{ isSearching ? '一致するクリップがありません' : 'クリップがありません' }}</p>
+        <p class="text-slate-600 text-xs mt-1">{{ isSearching ? '別のキーワードで試してください' : 'テキストを送信すると、ここに表示されます' }}</p>
       </div>
     </template>
     <template v-else>
@@ -44,6 +44,7 @@ import type { Clip } from '../composables/useClips'
 const props = defineProps<{
   clips: Clip[]
   loading: boolean
+  isSearching?: boolean
 }>()
 
 const emit = defineEmits<{

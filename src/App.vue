@@ -59,9 +59,27 @@
       <!-- Main -->
       <main class="max-w-lg mx-auto px-4 py-4 flex flex-col gap-4">
         <ClipInput :on-send="sendClip" />
+
+        <!-- 検索バー -->
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="クリップを検索..."
+            class="w-full bg-slate-800 text-white placeholder-slate-500 rounded-xl pl-9 pr-9 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            v-if="searchQuery"
+            @click="searchQuery = ''"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors text-sm"
+          >✕</button>
+        </div>
+
         <ClipList
-          :clips="decryptedClips"
+          :clips="filteredClips"
           :loading="clipsLoading"
+          :is-searching="!!searchQuery"
           @delete="deleteClip"
           @toggle-pin="togglePin"
         />
@@ -71,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import AuthForm from './components/AuthForm.vue'
 import EncryptionSetup from './components/EncryptionSetup.vue'
 import ClipInput from './components/ClipInput.vue'
@@ -95,7 +113,14 @@ const clips = ref<Clip[]>([])
 const decryptedClips = ref<Clip[]>([])
 const clipsLoading = ref(false)
 const decryptTrigger = ref(0)
+const searchQuery = ref('')
 let clipsApi: ReturnType<typeof useClips> | null = null
+
+const filteredClips = computed(() => {
+  if (!searchQuery.value.trim()) return decryptedClips.value
+  const q = searchQuery.value.toLowerCase()
+  return decryptedClips.value.filter((c) => c.content.toLowerCase().includes(q))
+})
 
 // clips または暗号化状態が変わるたびに復号
 watch([clips, decryptTrigger], async () => {
