@@ -24,6 +24,17 @@
           </div>
           <div class="flex items-center gap-3">
             <button
+              v-if="notificationSupported && notificationPermission !== 'granted'"
+              @click="requestPermission"
+              class="text-slate-400 hover:text-white text-sm transition-colors"
+              title="通知を有効にする"
+            >🔔</button>
+            <span
+              v-else-if="notificationPermission === 'granted'"
+              class="text-slate-600 text-sm"
+              title="通知オン"
+            >🔔</span>
+            <button
               v-if="encryptionEnabled"
               @click="handleLock"
               class="text-slate-400 hover:text-yellow-400 text-sm transition-colors"
@@ -64,12 +75,14 @@ import ClipList from './components/ClipList.vue'
 import { useAuth } from './composables/useAuth'
 import { useClips } from './composables/useClips'
 import { useEncryption } from './composables/useEncryption'
+import { useNotification } from './composables/useNotification'
 import type { Clip } from './composables/useClips'
 
 const version = __APP_VERSION__
 
 const { user, loading, signOut } = useAuth()
 const { encrypt, decrypt, lock } = useEncryption()
+const { permission: notificationPermission, supported: notificationSupported, requestPermission, notify } = useNotification()
 
 const encryptionReady = ref(false)
 const encryptionEnabled = ref(false)
@@ -105,6 +118,13 @@ function handleLock() {
   encryptionEnabled.value = false
 }
 
+async function handleNewClip(clip: Clip) {
+  // 自分のデバイスから送ったクリップは通知しない
+  if (!clipsApi || clip.device_name === clipsApi.getDeviceName()) return
+  const content = await decrypt(clip.content)
+  notify(clip.device_name, content)
+}
+
 async function sendClip(content: string) {
   if (!clipsApi) return
   const payload = encryptionEnabled.value ? await encrypt(content) : content
@@ -129,7 +149,7 @@ watch(user, (newUser) => {
   encryptionReady.value = false
   encryptionEnabled.value = false
   if (newUser) {
-    clipsApi = useClips(newUser.id)
+    clipsApi = useClips(newUser.id, handleNewClip)
     watch(clipsApi.clips, (v) => { clips.value = v }, { immediate: true })
     watch(clipsApi.loading, (v) => { clipsLoading.value = v }, { immediate: true })
     clipsApi.fetchClips()

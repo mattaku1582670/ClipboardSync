@@ -11,7 +11,7 @@ export interface Clip {
   pinned: boolean
 }
 
-export function useClips(userId: string) {
+export function useClips(userId: string, onNewClip?: (clip: Clip) => void) {
   const clips = ref<Clip[]>([])
   const loading = ref(false)
   let channel: RealtimeChannel | null = null
@@ -87,6 +87,7 @@ export function useClips(userId: string) {
         (payload) => {
           const newClip = payload.new as Clip
           clips.value = sortClips([newClip, ...clips.value]).slice(0, 20)
+          onNewClip?.(newClip)
         }
       )
       .on('broadcast', { event: 'pin-changed' }, (payload) => {
@@ -118,5 +119,5 @@ export function useClips(userId: string) {
     }
   }
 
-  return { clips, loading, sendClip, togglePin, deleteClip, fetchClips, subscribe, cleanup }
+  return { clips, loading, sendClip, togglePin, deleteClip, fetchClips, subscribe, cleanup, getDeviceName }
 }
