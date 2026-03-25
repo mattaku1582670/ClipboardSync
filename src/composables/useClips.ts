@@ -96,6 +96,10 @@ export function useClips(userId: string, onNewClip?: (clip: Clip) => void) {
           clips.value.map((c) => (c.id === clipId ? { ...c, pinned } : c))
         )
       })
+      .on('broadcast', { event: 'clip-deleted' }, (payload) => {
+        const { clipId } = payload.payload as { clipId: string }
+        clips.value = clips.value.filter((c) => c.id !== clipId)
+      })
       .subscribe()
   }
 
@@ -110,6 +114,7 @@ export function useClips(userId: string, onNewClip?: (clip: Clip) => void) {
   async function deleteClip(clipId: string) {
     await supabase.from('clips').delete().eq('id', clipId)
     clips.value = clips.value.filter((c) => c.id !== clipId)
+    channel?.send({ type: 'broadcast', event: 'clip-deleted', payload: { clipId } })
   }
 
   function cleanup() {
