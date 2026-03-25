@@ -16,7 +16,15 @@
           >{{ clip.content }}</a>
         </template>
         <template v-else>
-          <p class="text-white text-sm break-words line-clamp-4">{{ clip.content }}</p>
+          <p
+            class="text-white text-sm break-words"
+            :class="expanded ? '' : 'line-clamp-4'"
+          >{{ clip.content }}</p>
+          <button
+            v-if="isLong"
+            @click.stop="expanded = !expanded"
+            class="mt-1 text-xs text-slate-400 hover:text-blue-400 transition-colors"
+          >{{ expanded ? '折りたたむ ▲' : '全文表示 ▼' }}</button>
         </template>
       </div>
 
@@ -81,6 +89,12 @@ const emit = defineEmits<{
 const { copyToClipboard } = useClipboard()
 const justCopied = ref(false)
 const confirming = ref(false)
+const expanded = ref(false)
+
+// 改行含め5行超 or 200文字超を「長文」と判定
+const isLong = computed(() =>
+  props.clip.content.length > 200 || props.clip.content.split('\n').length > 4
+)
 let confirmTimer: ReturnType<typeof setTimeout> | null = null
 
 function handleDeleteRequest() {

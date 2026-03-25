@@ -4,10 +4,13 @@
       v-model="text"
       placeholder="クリップボードに送信するテキストを入力..."
       rows="3"
-      class="w-full bg-slate-700 text-white placeholder-slate-400 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+      class="w-full bg-slate-700 text-white placeholder-slate-400 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-2"
       @keydown.ctrl.enter="handleSend"
       @keydown.meta.enter="handleSend"
     />
+    <div class="flex justify-end mb-2">
+      <span class="text-xs text-slate-500">{{ text.length.toLocaleString() }} 文字</span>
+    </div>
     <div class="flex gap-2">
       <button
         @click="handleSend"
