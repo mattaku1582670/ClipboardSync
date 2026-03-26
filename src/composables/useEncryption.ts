@@ -4,9 +4,11 @@ import { deriveKey, generateSalt, encryptText, decryptText, isEncrypted } from '
 
 const SESSION_KEY_PREFIX = 'clipsync_enc_key_'
 
+// モジュールスコープで共有 — 全コンポーネントが同一インスタンスを参照する
+const key = ref<CryptoKey | null>(null)
+const isReady = ref(false)
+
 export function useEncryption() {
-  const key = ref<CryptoKey | null>(null)
-  const isReady = ref(false)
 
   async function getSalt(): Promise<Uint8Array | null> {
     const { data } = await supabase.auth.getUser()
