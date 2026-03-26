@@ -8,7 +8,13 @@
       @keydown.ctrl.enter="handleSend"
       @keydown.meta.enter="handleSend"
     />
-    <div class="flex justify-end mb-2">
+    <div class="flex justify-between items-center mb-2">
+      <button
+        v-if="text"
+        @click="text = ''"
+        class="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+      >✕ クリア</button>
+      <span v-else />
       <span class="text-xs text-slate-500">{{ text.length.toLocaleString() }} 文字</span>
     </div>
     <div class="flex gap-2">
@@ -20,13 +26,12 @@
         {{ sending ? '送信中...' : '送信' }}
       </button>
       <button
-        v-if="pasteSupported"
         @click="handlePasteAndSend"
         :disabled="sending"
         class="bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-slate-300 rounded-xl px-4 py-3 text-sm transition-colors"
-        title="クリップボードから貼り付けて送信"
+        title="クリップボードの内容をそのまま送信"
       >
-        📋 貼り付け
+        📋
       </button>
     </div>
     <p v-if="error" class="mt-2 text-red-400 text-xs">{{ error }}</p>
@@ -41,7 +46,7 @@ const props = defineProps<{
   onSend: (content: string) => Promise<void>
 }>()
 
-const { pasteSupported, readFromClipboard } = useClipboard()
+const { readFromClipboard } = useClipboard()
 
 const text = ref('')
 const sending = ref(false)
@@ -62,8 +67,12 @@ async function handleSend() {
 }
 
 async function handlePasteAndSend() {
+  error.value = ''
   const content = await readFromClipboard()
-  if (!content) return
+  if (!content) {
+    error.value = 'クリップボードの読み取りに失敗しました（ブラウザの権限を確認してください）'
+    return
+  }
   text.value = content
   await handleSend()
 }

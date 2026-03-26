@@ -14,24 +14,28 @@
       <!-- ピン留めセクション -->
       <template v-if="pinnedClips.length > 0">
         <p class="text-xs text-slate-500 font-medium px-1">📌 ピン留め</p>
+        <TransitionGroup name="clip" tag="div" class="flex flex-col gap-3">
+          <ClipItem
+            v-for="clip in pinnedClips"
+            :key="clip.id"
+            :clip="clip"
+            @delete="emit('delete', $event)"
+            @toggle-pin="(id, pinned) => emit('toggle-pin', id, pinned)"
+          />
+        </TransitionGroup>
+        <div v-if="unpinnedClips.length > 0" class="border-t border-slate-700/60" />
+      </template>
+
+      <!-- 通常セクション -->
+      <TransitionGroup name="clip" tag="div" class="flex flex-col gap-3">
         <ClipItem
-          v-for="clip in pinnedClips"
+          v-for="clip in unpinnedClips"
           :key="clip.id"
           :clip="clip"
           @delete="emit('delete', $event)"
           @toggle-pin="(id, pinned) => emit('toggle-pin', id, pinned)"
         />
-        <div v-if="unpinnedClips.length > 0" class="border-t border-slate-700/60" />
-      </template>
-
-      <!-- 通常セクション -->
-      <ClipItem
-        v-for="clip in unpinnedClips"
-        :key="clip.id"
-        :clip="clip"
-        @delete="emit('delete', $event)"
-        @toggle-pin="(id, pinned) => emit('toggle-pin', id, pinned)"
-      />
+      </TransitionGroup>
     </template>
   </div>
 </template>
@@ -55,3 +59,28 @@ const emit = defineEmits<{
 const pinnedClips = computed(() => props.clips.filter((c) => c.pinned))
 const unpinnedClips = computed(() => props.clips.filter((c) => !c.pinned))
 </script>
+
+<style scoped>
+/* 新着クリップ: 上からスライドイン */
+.clip-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.clip-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+}
+
+/* 削除: フェードアウト + 縮小 */
+.clip-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.clip-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* ピン留め/解除時の位置移動 */
+.clip-move {
+  transition: transform 0.3s ease;
+}
+</style>
