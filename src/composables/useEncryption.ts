@@ -2,6 +2,8 @@ import { ref, readonly } from 'vue'
 import { supabase } from '../lib/supabase'
 import { deriveKey, generateSalt, encryptText, decryptText, isEncrypted } from '../lib/crypto'
 
+const SESSION_KEY_PREFIX = 'clipsync_enc_key_'
+
 export function useEncryption() {
   const key = ref<CryptoKey | null>(null)
   const isReady = ref(false)
@@ -32,11 +34,50 @@ export function useEncryption() {
     }
     key.value = await deriveKey(passphrase, salt)
     isReady.value = true
+    await _saveKeyToSession(key.value)
+  }
+
+  async function _saveKeyToSession(cryptoKey: CryptoKey) {
+    try {
+      const { data } = await supabase.auth.getUser()
+      const userId = data.user?.id
+      if (!userId) return
+      const jwk = await crypto.subtle.exportKey('jwk', cryptoKey)
+      sessionStorage.setItem(SESSION_KEY_PREFIX + userId, JSON.stringify(jwk))
+    } catch {
+      // sessionStorage が使えない環境では無視
+    }
+  }
+
+  async function tryRestore(): Promise<boolean> {
+    try {
+      const { data } = await supabase.auth.getUser()
+      const userId = data.user?.id
+      if (!userId) return false
+      const stored = sessionStorage.getItem(SESSION_KEY_PREFIX + userId)
+      if (!stored) return false
+      const jwk = JSON.parse(stored) as JsonWebKey
+      key.value = await crypto.subtle.importKey(
+        'jwk',
+        jwk,
+        { name: 'AES-GCM' },
+        true,
+        ['encrypt', 'decrypt']
+      )
+      isReady.value = true
+      return true
+    } catch {
+      return false
+    }
   }
 
   function lock() {
     key.value = null
     isReady.value = false
+    // セッションキーを全消去
+    Object.keys(sessionStorage)
+      .filter(k => k.startsWith(SESSION_KEY_PREFIX))
+      .forEach(k => sessionStorage.removeItem(k))
   }
 
   async function encrypt(plaintext: string): Promise<string> {
@@ -54,5 +95,5 @@ export function useEncryption() {
     }
   }
 
-  return { isReady: readonly(isReady), hasSalt, setup, lock, encrypt, decrypt }
+  return { isReady: readonly(isReady), hasSalt, setup, lock, tryRestore, encrypt, decrypt }
 }

@@ -14,7 +14,7 @@ export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<C
     { name: 'PBKDF2', salt: salt.buffer as ArrayBuffer, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     keyMaterial,
     { name: ALGO, length: KEY_LENGTH },
-    false,
+    true,
     ['encrypt', 'decrypt']
   )
 }

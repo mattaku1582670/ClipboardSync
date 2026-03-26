@@ -103,7 +103,7 @@ import type { Clip } from './composables/useClips'
 const version = __APP_VERSION__
 
 const { user, loading, signOut } = useAuth()
-const { encrypt, decrypt, lock } = useEncryption()
+const { encrypt, decrypt, lock, tryRestore } = useEncryption()
 const { permission: notificationPermission, supported: notificationSupported, requestPermission, notify } = useNotification()
 
 const encryptionReady = ref(false)
@@ -175,19 +175,38 @@ async function deleteClip(id: string) {
   await clipsApi.deleteClip(id)
 }
 
-watch(user, (newUser) => {
+watch(user, async (newUser, oldUser) => {
+  const userChanged = newUser?.id !== oldUser?.id
+
   if (clipsApi) {
     clipsApi.cleanup()
     clipsApi = null
   }
-  encryptionReady.value = false
-  encryptionEnabled.value = false
+
+  // ユーザーが実際に切り替わった時だけ暗号化をリセット
+  // （Supabase トークンリフレッシュ等では ID が同じなのでリセットしない）
+  if (userChanged) {
+    encryptionReady.value = false
+    encryptionEnabled.value = false
+    lock()
+  }
+
   if (newUser) {
     clipsApi = useClips(newUser.id, handleNewClip)
     watch(clipsApi.clips, (v) => { clips.value = v }, { immediate: true })
     watch(clipsApi.loading, (v) => { clipsLoading.value = v }, { immediate: true })
     clipsApi.fetchClips()
     clipsApi.subscribe()
+
+    // sessionStorage からキーを復元（ページ再ロード後も再入力不要に）
+    if (!encryptionReady.value) {
+      const restored = await tryRestore()
+      if (restored) {
+        encryptionEnabled.value = true
+        encryptionReady.value = true
+        decryptTrigger.value++
+      }
+    }
   }
 })
 
